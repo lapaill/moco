@@ -36,7 +36,7 @@ class RandomHEaugmentation(object):
         return img
 
     def __repr__(self):
-        return self.__class__.__name__ + '(h_std={}, e_std={})'.format(self.h_std, self.e_std)
+        return self.__class__.__name__ + ' (h_std={}, e_std={})'.format(self.h_std, self.e_std)
 
 ###
 
@@ -139,7 +139,7 @@ class CropAndRotate(torch.nn.Module):
         return x
 
     def __repr__(self):
-        return self.__class__.__name__ + '(p=1)'
+        return self.__class__.__name__ + ' (Size={})'.format(self.size)
 # Crop
 
 
