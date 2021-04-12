@@ -1,6 +1,8 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
-from PIL import ImageFilter
 import random
+
+import torch
+from PIL import ImageFilter
 
 
 class TwoCropsTransform:
@@ -15,13 +17,17 @@ class TwoCropsTransform:
         return [q, k]
 
 
-class GaussianBlur(object):
+class GaussianBlur(torch.nn.Module):
     """Gaussian blur augmentation in SimCLR https://arxiv.org/abs/2002.05709"""
 
     def __init__(self, sigma=[.1, 2.]):
+        super().__init__()
         self.sigma = sigma
 
-    def __call__(self, x):
+    def forward(self, x):
         sigma = random.uniform(self.sigma[0], self.sigma[1])
         x = x.filter(ImageFilter.GaussianBlur(radius=sigma))
         return x
+
+    def __repr__(self):
+        return self.__class__.__name__ + '(sigma={})'.format(self.sigma)
