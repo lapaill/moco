@@ -6,6 +6,7 @@ import math
 import os
 import random
 import shutil
+import sys
 import time
 import warnings
 
@@ -27,8 +28,9 @@ from torch.utils.tensorboard import writer
 
 import moco.builder
 import moco.loader
-from transform import (Crop, CropAndRotate, ElasticDistortion,
-                       RandomHEaugmentation)
+from moco.transform import (Crop, CropAndRotate, ElasticDistortion,
+                            MultipleElasticDistort, RandomHEaugmentation,
+                            RandomRotate90)
 
 # model_names = sorted(name for name in models.__dict__
 #    if name.islower() and not name.startswith("__")
@@ -150,11 +152,9 @@ def main():
 
 def main_worker(gpu, ngpus_per_node, args):
     args.gpu = gpu
-    print('y')
     out_path = './outputs/{}'.format(args.name_expe)
     os.makedirs(out_path, exist_ok=True)
     sum_writer = writer.SummaryWriter(log_dir=out_path)
-    print('yo')
 
     # suppress printing if not master
     if args.multiprocessing_distributed and args.gpu != 0:
@@ -249,10 +249,12 @@ def main_worker(gpu, ngpus_per_node, args):
     #                                std=[0.134, 0.174, 0.131])
     # normalize = transforms.Normalize(mean=[0.753, 0.584, 0.706], # norme challenge 256
     #                                std=[0.128, 0.157, 0.122])
-    # normalize = transforms.Normalize(mean=[0.747, 0.514, 0.70], # norme curie 256
+    # normalize = transforms.Normalize(mean=[0.747, 0.514, 0.700], # norme curie 256
     #                                std=[0.145, 0.209, 0.154])
-    normalize = transforms.Normalize(mean=[0.703, 0.475, 0.664],  # Norm concat
-                                     std=[0.162, 0.183, 0.140])
+    # normalize = transforms.Normalize(mean=[0.703, 0.475, 0.664], # Norm concat
+    #                                  std=[0.162, 0.183, 0.140])
+    normalize = transforms.Normalize(mean=[0.723, 0.515, 0.662],  # Norm TCGA
+                                     std=[0.141, 0.156, 0.131])
 
     if args.aug_plus:
         # MoCo v2's aug: similar to SimCLR https://arxiv.org/abs/2002.05709
@@ -273,24 +275,33 @@ def main_worker(gpu, ngpus_per_node, args):
         ]
     elif args.transformations:
         augmentation = []
-        if 'Vflip' in args.transformations:
-            augmentation.append(transforms.RandomVerticalFlip())
-        if 'Hflip' in args.transformations:
-            augmentation.append(transforms.RandomHorizontalFlip())
+        if 'ElasticDistorsion' in args.transformations:
+            augmentation.append(transforms.RandomApply(
+                [ElasticDistortion()], p=0.5))
         if 'Crop' in args.transformations:
             augmentation.append(Crop())
         if 'Crop_and_rotate' in args.transformations:
             augmentation.append(CropAndRotate())
+        if 'Rotate90' in args.transformations:
+            augmentation.append(RandomRotate90())
+        if 'Vflip' in args.transformations:
+            augmentation.append(transforms.RandomVerticalFlip())
+        if 'Hflip' in args.transformations:
+            augmentation.append(transforms.RandomHorizontalFlip())
         if 'HEaug' in args.transformations:
-            augmentation.append(RandomHEaugmentation(0.025, 0.003))
-        if 'ElasticDistorsion' in args.transformations:
-            augmentation.append(ElasticDistortion())
+            augmentation.append(transforms.RandomApply(
+                [RandomHEaugmentation(0.04, 0.035)], p=0.5))
         if 'GaussianBlur' in args.transformations:
-            augmentation.append(moco.loader.GaussianBlur([.1, 2.]))
+            augmentation.append(transforms.RandomApply(
+                [moco.loader.GaussianBlur([.1, 2.])], p=0.5))
         if 'Jitter' in args.transformations:
-            augmentation.append(transforms.ColorJitter(0.8, 0.8, 0.8, 0.2))
+            augmentation.append(transforms.RandomApply(
+                [transforms.ColorJitter(0.8, 0.8, 0.8, 0.2)], p=0.5))
         if 'GrayScale' in args.transformations:
             augmentation.append(transforms.RandomGrayscale(p=0.5))
+        if 'MultipleElasticDistort' in args.transformations:
+            augmentation.append(transforms.RandomApply(
+                [MultipleElasticDistort(0.4)], p=0.5))
 
         augmentation.append(transforms.ToTensor())
         augmentation.append(normalize)
@@ -298,7 +309,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
     else:
         # MoCo v1's aug: the same as InstDisc https://arxiv.org/abs/1805.01978
-        augmentat = [
+        augmentation = [
             transforms.RandomResizedCrop(224, scale=(0.8, 1.)),
             transforms.RandomGrayscale(p=0.2),
             transforms.ColorJitter(0.4, 0.4, 0.4, 0.4),
@@ -327,9 +338,9 @@ def main_worker(gpu, ngpus_per_node, args):
         num_workers=args.workers, pin_memory=True, sampler=train_sampler, drop_last=True)
 
     for epoch in range(args.start_epoch, args.epochs):
+        print('epoch n°{}'.format(epoch))
         if args.distributed:
             train_sampler.set_epoch(epoch)
-        print(epoch)
         # adjust_learning_rate(optimizer, epoch, args)
 
         # train for one epoch
@@ -363,6 +374,8 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, args, sum
     end = time.time()
     iters = len(train_loader)
     for i, (images, _) in enumerate(train_loader):
+        print(len(images[0]))
+        sys.stdout.flush()
         # measure data loading time
         data_time.update(time.time() - end)
         scheduler.step(epoch + i / iters)
