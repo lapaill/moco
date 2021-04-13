@@ -28,7 +28,10 @@ class RandomHEaugmentation(object):
         self.e_std = e_std
 
     def __call__(self, img):
-        augmentation = np.random.normal(0, [self.h_std, self.e_std, 0], 3)
+        augmentation = np.array(torch.normal(
+            0, torch.Tensor([self.h_std, self.e_std, 0])))
+        # Use PyTorch random number generator instead of Numpy's
+        # augmentation = np.random.normal(0, [self.h_std, self.e_std, 0], 3)
         img = np.array(img)
         img = rgb2heg(img) + augmentation
         img = img_as_ubyte(heg2rgb(img))
@@ -52,7 +55,10 @@ class RandomRotate90(torch.nn.Module):
 
     def _get_param(self):
         if self.choice == 'uniform':
-            k = np.random.choice([0, 90, 180, 270])
+            k = int(torch.randint(0, 4, (1,)))
+            k = k*90
+            # Use PyTorch random number generator instead of Numpy's
+            # k = np.random.choice([0, 90, 180, 270])
         return k
 
     def forward(self, img):
@@ -116,7 +122,9 @@ def find_angle(bbox):
       """
     rect_out = True
     while rect_out:
-        angle = random.randrange(0, 362)
+        # Use PyTorch random number generator instead of Numpy's
+        # angle = random.randrange(0, 362)
+        angle = int(torch.randint(0, 362, (1,)))
         rot_bbox = rotate_rect(bbox, angle)
         if np.min(rot_bbox) > 0 and np.max(rot_bbox) < 512:
             rect_out = False
@@ -131,7 +139,10 @@ class CropAndRotate(torch.nn.Module):
         self.original_size = original_size
 
     def forward(self, x):
+        # Use PyTorch random number generator instead of Numpy's
         x1, y1 = random.randrange(0, 288), random.randrange(0, 288)
+        x1, y1 = int(torch.randint(0, 288, (1,))), int(
+            torch.randint(0, 288, (1,)))
         bbox = np.array([x1, y1, x1 + 224, y1 + 224], dtype=int)
         final_angle = find_angle(bbox)
         x = x.rotate(final_angle)
@@ -158,81 +169,34 @@ class Crop(torch.nn.Module):
         self.original_size = original_size
 
     def forward(self, img):
-        rand1 = random.randint(0, self.original_size - self.size - 1)
-        rand2 = random.randint(0, self.original_size - self.size - 1)
+        # Use PyTorch random number generator instead of Numpy's
+        rand1 = int(torch.randint(0, self.original_size - self.size - 1, (1,)))
+        rand2 = int(torch.randint(0, self.original_size - self.size - 1, (1,)))
         img = img.crop((rand1, rand2, rand1 + 224, rand2 + 224))
         return img
 
     def __repr__(self):
-        return self.__class__.__name__ + '(Size={})'.format(self.size)
+        return self.__class__.__name__ + ' (Size={})'.format(self.size)
 
 # Elastic Distorsion
 
 
-class ElasticDistortion(object):  # attention : pas compatible avec rotation
-    """Get distorted crop from image.
+class MultipleElasticDistort(object):
+    """Locally performs elastic distortions on the image.
+       It can take a PIL image of any size if it is a square, RGB or grayscale.
 
-    Note that crop corner coordinates should be given following
-    mathematics conventions, and not image processing conventions.
+       Args:
+          cutting : n means the image is divided into a grid of n*n squares, the elastic distortion being applied on each square.
+            Beware : cutting has to dvide the size of the input image 
 
-    Arguments:
-        im: input image (2D, with 1 or more channels).
-        crop_x, crop_y: coordinates of four points.
-        shape: crop shape.
-    Returns:
-        crop: image containing resulting crop.
+          percentage : value x between 0 and 1, defines the range of stretching / compressing the square, each corner can be moved of
+          x*square_size from its original position
+
+      Output : 
+        Is a PIL image
     """
 
-    def __init__(self, original_size=512, size=224, r=50):  # r < crop_size / 2
-        self.size = size
-        self.original_size = original_size
-        self.r = r
-
-    def __call__(self, x):
-        i_corners = np.array([0, self.size])
-        j_corners = np.array([0, self.size])
-        rand_stretch1 = random.randint(-self.r, self.r)
-        rand_stretch2 = random.randint(-self.r, self.r)
-        rand_stretch3 = random.randint(-self.r, self.r)
-        rand_stretch4 = random.randint(-self.r, self.r)
-        rand_stretch5 = random.randint(-self.r, self.r)
-        rand_stretch6 = random.randint(-self.r, self.r)
-        L = [rand_stretch1, rand_stretch2, rand_stretch3,
-             rand_stretch4, rand_stretch5, rand_stretch6]
-        maxi = max(L)
-        # attention au stretch on peut pas partir de 0 ... dépend de la valeur générée par stretch. Idem on peut pas aller jusqu'au bout...
-        rand1 = random.randint(maxi, self.original_size - self.size - 1 - maxi)
-        rand2 = random.randint(maxi, self.original_size - self.size - 1 - maxi)
-        # on ne peut pas dépasser im_size = 512. Il faut générer toutes les coordonnées en random + stretch
-        crop_i = np.array([rand1, rand1 + rand_stretch2, rand1 +
-                           224 + rand_stretch3, rand1 + 224 + rand_stretch5])
-        crop_j = np.array([rand2, rand2 + 224 + rand_stretch1,
-                           rand2 + rand_stretch4, rand2 + 224 + rand_stretch6])
-        interp_i = interp2d(i_corners, j_corners, crop_i)
-        interp_j = interp2d(i_corners, j_corners, crop_j)
-
-        i = np.arange(self.size)
-        j = np.arange(self.size)
-        coords_i = interp_i(i, j)
-        coords_j = interp_j(i, j)
-        tab = np.asarray(x)
-        if len(tab.shape) == 2:  # Pour les images en niveau de gris
-            crop = map_coordinates(tab, [coords_j, coords_i])
-        else:
-            crop = np.zeros(
-                [coords_j.shape[0], coords_j.shape[1], tab.shape[2]], dtype=np.uint8
-            )
-            for channel in range(tab.shape[2]):
-                crop[:, :, channel] = map_coordinates(
-                    tab[:, :, channel], [coords_j, coords_i]
-                )
-        crop = Image.fromarray(crop)
-        return crop
-
-
-class MultipleElasticDistort(object):
-
-    def __init__(self, percentage=0.2, cutting=8):  # cutting divise size
+    def __init__(self, percentage=0.2, cutting=8):
         self.percentage = percentage
         self.cutting = cutting
 
@@ -244,8 +208,8 @@ class MultipleElasticDistort(object):
         r = int(self.percentage*size/self.cutting)
         for i in range(1, self.cutting):
             for j in range(1, self.cutting):  # les points intérieurs
-                new_coordinates[i, j][0] += random.randint(-r, r)
-                new_coordinates[i, j][1] += random.randint(-r, r)
+                new_coordinates[i, j][0] += int(torch.randint(-r, r, (1,)))
+                new_coordinates[i, j][1] += int(torch.randint(-r, r, (1,)))
         tab = np.asarray(x)
         if len(tab.shape) == 2:
             im = Image.new('L', (size, size))
@@ -280,5 +244,5 @@ class MultipleElasticDistort(object):
                 im.paste(im_crop_ij, (j*size//self.cutting, i*size//self.cutting))
         return(im)
 
-    def __repr__(self):
-        return self.__class__.__name__ + '(ratio={})'.format(self.percentage)
+        def __repr__(self):
+            return self.__class__.__name__ + ' (ratio={})'.format(self.size)

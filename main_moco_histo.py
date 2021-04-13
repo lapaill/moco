@@ -28,9 +28,8 @@ from torch.utils.tensorboard import writer
 
 import moco.builder
 import moco.loader
-from moco.transform import (Crop, CropAndRotate, ElasticDistortion,
-                            MultipleElasticDistort, RandomHEaugmentation,
-                            RandomRotate90)
+from moco.transform import (Crop, CropAndRotate, MultipleElasticDistort,
+                            RandomHEaugmentation, RandomRotate90)
 
 # model_names = sorted(name for name in models.__dict__
 #    if name.islower() and not name.startswith("__")
@@ -108,7 +107,7 @@ parser.add_argument('--transformations', metavar='transfo', type=str, nargs="+",
                     default=['Hflip', 'Vflip'],
                     help='list of transformations to apply for data augmentation'
                     'during the training \n among: [ Hflip, Vflip, Crop,'
-                    'Crop_and_rotate, HEaug, GrayScale, ElasticDistorsion, GaussianBlur, Jitter ]')
+                    'Crop_and_rotate, HEaug, GrayScale, MultipleElasticDistort, GaussianBlur, Jitter, RandomRotate90 ]')
 
 
 def main():
@@ -275,9 +274,6 @@ def main_worker(gpu, ngpus_per_node, args):
         ]
     elif args.transformations:
         augmentation = []
-        if 'ElasticDistorsion' in args.transformations:
-            augmentation.append(transforms.RandomApply(
-                [ElasticDistortion()], p=0.5))
         if 'Crop' in args.transformations:
             augmentation.append(Crop())
         if 'Crop_and_rotate' in args.transformations:
@@ -298,7 +294,7 @@ def main_worker(gpu, ngpus_per_node, args):
             augmentation.append(transforms.RandomApply(
                 [transforms.ColorJitter(0.8, 0.8, 0.8, 0.2)], p=0.5))
         if 'GrayScale' in args.transformations:
-            augmentation.append(transforms.RandomGrayscale(p=0.5))
+            augmentation.append(transforms.RandomGrayscale(p=0.2))
         if 'MultipleElasticDistort' in args.transformations:
             augmentation.append(transforms.RandomApply(
                 [MultipleElasticDistort(0.4)], p=0.5))
@@ -374,7 +370,6 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, args, sum
     end = time.time()
     iters = len(train_loader)
     for i, (images, _) in enumerate(train_loader):
-        print(len(images[0]))
         sys.stdout.flush()
         # measure data loading time
         data_time.update(time.time() - end)
