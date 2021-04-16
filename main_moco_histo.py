@@ -109,9 +109,9 @@ parser.add_argument('--transformations', metavar='transfo', type=str, nargs="+",
                     'during the training \n among: [ Hflip, Vflip, Crop,'
                     'Crop_and_rotate, HEaug, GrayScale, MultipleElasticDistort, GaussianBlur, Jitter, RandomRotate90 ]')
 parser.add_argument('--crop_and_transform', default = 'store_true', help = 'choose to use TwoCropsAndTransform or TwoCropsTransform')
-parser.add_argument('--image_size', default = 256, type=int,
+parser.add_argument('--image-size', default = 256, type=int,
                     help='dimension of the input image (default = 256)')
-parser.add_argument('--crop_size', default = 96, type=int,
+parser.add_argument('--crop-size', default = 96, type=int,
                     help='dimension of the crop (default = 96)')
 
 
