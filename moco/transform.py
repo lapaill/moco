@@ -172,7 +172,7 @@ class Crop(torch.nn.Module):
         # Use PyTorch random number generator instead of Numpy's
         rand1 = int(torch.randint(0, self.original_size - self.size - 1, (1,)))
         rand2 = int(torch.randint(0, self.original_size - self.size - 1, (1,)))
-        img = img.crop((rand1, rand2, rand1 + 224, rand2 + 224))
+        img = img.crop((rand1, rand2, rand1 + self.size, rand2 + self.size))
         return img
 
     def __repr__(self):
