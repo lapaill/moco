@@ -108,10 +108,11 @@ parser.add_argument('--transformations', metavar='transfo', type=str, nargs="+",
                     help='list of transformations to apply for data augmentation'
                     'during the training \n among: [ Hflip, Vflip, Crop,'
                     'Crop_and_rotate, HEaug, GrayScale, MultipleElasticDistort, GaussianBlur, Jitter, RandomRotate90 ]')
-parser.add_argument('--crop-and-transform', default = 'store_true', help = 'choose to use TwoCropsAndTransform or TwoCropsTransform')
-parser.add_argument('--image-size', default = 256, type=int,
+parser.add_argument('--crop-and-transform', action='store_true',
+                    help='choose to use TwoCropsAndTransform or TwoCropsTransform')
+parser.add_argument('--image-size', default=256, type=int,
                     help='dimension of the input image (default = 256)')
-parser.add_argument('--crop-size', default = 96, type=int,
+parser.add_argument('--crop-size', default=96, type=int,
                     help='dimension of the crop (default = 96)')
 
 
@@ -302,7 +303,7 @@ def main_worker(gpu, ngpus_per_node, args):
             augmentation.append(transforms.RandomGrayscale(p=0.2))
         if 'MultipleElasticDistort' in args.transformations:
             augmentation.append(transforms.RandomApply(
-                [MultipleElasticDistort(percentage = 0.4)], p=0.5))
+                [MultipleElasticDistort(percentage=0.4)], p=0.5))
 
         augmentation.append(transforms.ToTensor())
         augmentation.append(normalize)
@@ -320,18 +321,17 @@ def main_worker(gpu, ngpus_per_node, args):
         ]
 
     print('using the folder thing')
-    
+
     if args.crop_and_transform:
         train_dataset = datasets.ImageFolder(
             traindir,
-            moco.loader.TwoCropsAndTransform(transforms.Compose(augmentation), randomcrop = True, original_size = args.image_size, size = args.crop_size, proximity = 48))
-    
+            moco.loader.TwoCropsAndTransform(transforms.Compose(augmentation), randomcrop=True, original_size=args.image_size, size=args.crop_size, proximity=48))
+
     else:
         train_dataset = datasets.ImageFolder(
             traindir,
             moco.loader.TwoCropsTransform(transforms.Compose(augmentation)))
 
-        
     scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
         optimizer=optimizer, T_0=1, T_mult=2)
 
@@ -413,8 +413,8 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch, args, sum
         sum_writer.add_scalar('loss', l2store, iters * epoch + i)
         current_lr = [x['lr'] for x in optimizer.param_groups][0]
         sum_writer.add_scalar('lr', current_lr, iters * epoch + i)
-        sum_writer.add_scalar('acc1', acc1, iters* epoch + i)
-        sum_writer.add_scalar('acc5', acc5, iters* epoch + i)
+        sum_writer.add_scalar('acc1', acc1, iters * epoch + i)
+        sum_writer.add_scalar('acc5', acc5, iters * epoch + i)
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
