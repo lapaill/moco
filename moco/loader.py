@@ -50,11 +50,9 @@ class TwoCropsAndTransform:
             y = x.copy()
             rand1 = int(torch.randint(0, self.original_size - self.size,(1,)))
             rand2 = int(torch.randint(0, self.original_size - self.size,(1,)))
-            print(rand1,rand2)
             x = x.crop((rand1, rand2, rand1 + self.size, rand2 + self.size))
             y = y.crop((max(0,rand1+self.proximity-self.size),max(0,rand2+self.proximity-self.size), min(self.original_size,rand1-self.proximity+2*self.size), min(self.original_size,rand2-self.proximity+2*self.size)))
             xdim,ydim = y.size
-            print(xdim,ydim)
             rand3 = int(torch.randint(0, xdim - self.size,(1,)))
             rand4 = int(torch.randint(0, ydim - self.size,(1,)))
             y = y.crop((rand3, rand4, rand3 + self.size, rand4 + self.size))
