@@ -163,7 +163,7 @@ class Crop(torch.nn.Module):
         size (int): Desired output size of the crop.
     """
 
-    def __init__(self, original_size=512, size=224,):
+    def __init__(self, original_size=512, size=224):
         super().__init__()
         self.size = size
         self.original_size = original_size
@@ -244,5 +244,6 @@ class MultipleElasticDistort(object):
                 im.paste(im_crop_ij, (j*size//self.cutting, i*size//self.cutting))
         return(im)
 
-        def __repr__(self):
-            return self.__class__.__name__ + ' (ratio={})'.format(self.size)
+
+    def __repr__(self):
+        return self.__class__.__name__ + ' (ratio={})'.format(self.percentage)
