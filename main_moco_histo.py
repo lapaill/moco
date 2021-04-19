@@ -110,6 +110,8 @@ parser.add_argument('--transformations', metavar='transfo', type=str, nargs="+",
                     'Crop_and_rotate, HEaug, GrayScale, MultipleElasticDistort, GaussianBlur, Jitter, RandomRotate90 ]')
 parser.add_argument('--crop-and-transform', action='store_true',
                     help='choose to use TwoCropsAndTransform or TwoCropsTransform')
+parser.add_argument('--same-crop', default = False, action = 'store_true',
+		    help='choose to use random different crops')
 parser.add_argument('--image-size', default=256, type=int,
                     help='dimension of the input image (default = 256)')
 parser.add_argument('--crop-size', default=96, type=int,
@@ -303,7 +305,7 @@ def main_worker(gpu, ngpus_per_node, args):
             augmentation.append(transforms.RandomGrayscale(p=0.2))
         if 'MultipleElasticDistort' in args.transformations:
             augmentation.append(transforms.RandomApply(
-                [MultipleElasticDistort(percentage=0.4)], p=0.5))
+                [MultipleElasticDistort(percentage=0.35)], p=0.5))
 
         augmentation.append(transforms.ToTensor())
         augmentation.append(normalize)
@@ -325,7 +327,7 @@ def main_worker(gpu, ngpus_per_node, args):
     if args.crop_and_transform:
         train_dataset = datasets.ImageFolder(
             traindir,
-            moco.loader.TwoCropsAndTransform(transforms.Compose(augmentation), randomcrop=True, original_size=args.image_size, size=args.crop_size, proximity=48))
+            moco.loader.TwoCropsAndTransform(transforms.Compose(augmentation), samecrop=args.same_crop, original_size=args.image_size, size=args.crop_size, proximity=48))
 
     else:
         train_dataset = datasets.ImageFolder(
