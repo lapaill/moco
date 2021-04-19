@@ -244,5 +244,5 @@ class MultipleElasticDistort(object):
                 im.paste(im_crop_ij, (j*size//self.cutting, i*size//self.cutting))
         return(im)
 
-        def __repr__(self):
-            return self.__class__.__name__ + ' (ratio={})'.format(self.size)
+    def __repr__(self):
+        return self.__class__.__name__ + ' (ratio={})'.format(self.size)
