@@ -38,15 +38,15 @@ class TwoCropsAndTransform:
     If randomcrop = False, creates the same two crops, otherwise create two different crops which are constrained to be close with the proximity parameter (size > proximity)
     """
 
-    def __init__(self, base_transform, randomcrop=False, original_size=256, size=96, proximity=48):
+    def __init__(self, base_transform, samecrop=False, original_size=256, size=96, proximity=48):
         self.base_transform = base_transform
-        self.randomcrop = randomcrop
+        self.samecrop = samecrop
         self.original_size = original_size
         self.size = size
         self.proximity = proximity
 
     def __call__(self, x):
-        if self.randomcrop == True:
+        if not self.samecrop:
             y = x.copy()
             rand1 = int(torch.randint(0, self.original_size - self.size, (1,)))
             rand2 = int(torch.randint(0, self.original_size - self.size, (1,)))
